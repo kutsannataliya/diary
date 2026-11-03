@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Дневник приёма</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6a66;--ln:#e3e1da;--ac:#2f7d6b;--acbg:#dff0ea;--warn:#fff4d6;--warntx:#7a5a00;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151514;--card:#222220;--tx:#efeeea;--mut:#a3a29c;--ln:#363633;--ac:#5fc2a8;--acbg:#1f3a33;--warn:#3b3214;--warntx:#f0d58a}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding-bottom:84px}
+.wrap{max-width:560px;margin:0 auto;padding:12px}
+h1{font-size:20px;margin:4px 0 2px}.mut{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px;margin:10px 0}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nav button,.start input{font:inherit;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px 14px}
+.bar{height:8px;background:var(--ln);border-radius:5px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--ac);width:0;transition:width .2s}
+.slot{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:16px 4px 6px}
+.row{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;margin:6px 0;min-height:56px}
+.row.done{background:var(--acbg)}.row.done .nm{text-decoration:line-through;opacity:.6}
+.cb{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--ac);background:none;color:#fff;font-size:18px;line-height:1;padding:0}
+.row.done .cb{background:var(--ac)}
+.nm{font-weight:600}.ds{font-size:13px;color:var(--mut)}
+.tag{display:inline-block;font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;background:var(--warn);color:var(--warntx);font-weight:500}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--ln);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.tabs button{flex:1;border:0;background:none;color:var(--mut);font:inherit;font-size:13px;padding:8px}.tabs button.on{color:var(--ac);font-weight:700}
+.tl{overflow-x:auto;border:1px solid var(--ln);border-radius:12px;background:var(--card)}
+.tl table{border-collapse:collapse;font-size:12px}
+.tl th,.tl td{padding:0;height:26px;min-width:22px;text-align:center}
+.tl th{color:var(--mut);font-weight:500}
+.tl .l{position:sticky;left:0;background:var(--card);min-width:128px;max-width:128px;text-align:left;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:1;border-right:1px solid var(--ln)}
+.tl td.f{opacity:.9}.tl td.now{box-shadow:inset 2px 0 0 var(--tx),inset -2px 0 0 var(--tx)}.tl th.now{color:var(--tx);font-weight:700}
+.cr{border-left:5px solid;padding-left:10px}
+.cr b{display:block}.cr p{margin:2px 0;font-size:13px}
+ul.q{padding-left:18px;margin:6px 0;font-size:14px}ul.q li{margin:6px 0}
+.start{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="tabs" id="tabs"></div>
+<script>
+const SL=[["am","Утро, до завтрака"],["bf","Завтрак, с едой"],["day","В течение дня"],["pm","Перед ужином, за 30 мин"],["dn","Ужин, с едой"]];
+const INF=9999;
+const D=[
+{id:"kip",n:"КИП",d:"1 флакон, развести водой комнатной температуры",s:["am"],r:[[1,15],[46,60]],g:"С 1-го дня",nt:"Повтор «через 1 месяц» — срок понят как пауза 30 дней после курса"},
+{id:"mg",n:"Mega-IgG2000",d:"1 капсула в сутки",s:["day"],r:[[61,90],[105,134],[149,178]],g:"После КИП",nt:"30 дней приёма, 14 дней перерыва, далее по кругу"},
+{id:"kc",n:"Кошачий коготь",d:"1 капсула с едой",s:["bf"],r:[[1,60]],g:"С 1-го дня"},
+{id:"fl",n:"Фламин (саше)",d:"1 саше за 30 мин до еды, 2 раза в день",s:["am","pm"],r:[[1,42]],g:"С 1-го дня"},
+{id:"rb",n:"Ребагит 100 мг",d:"½ таблетки с едой, 2 раза в день",s:["bf","dn"],r:[[1,60]],g:"С 1-го дня"},
+{id:"hs",n:"Хомоспорин М",d:"15 мл за 30 мин до еды",s:["am"],r:[[21,41]],g:"С 21-го дня"},
+{id:"pb",n:"Пробиотик Бакздрав 29",d:"1 капсула кишечнорастворимая",s:["day"],r:[[42,71]],g:"С 21-го дня",nt:"После Хомоспорина, 1 месяц"},
+{id:"zn",n:"Цинк-карнозин",d:"1 капсула с едой",s:["bf"],r:[[21,80]],g:"С 21-го дня"},
+{id:"th",n:"Теанин",d:"1 капсула с едой",s:["bf"],r:[[21,80]],g:"С 21-го дня"},
+{id:"mv",n:"Мультивитамины",d:"1 таблетка с едой",s:["bf"],r:[[21,50]],g:"С 21-го дня"},
+{id:"ca",n:"Кальций",d:"10 мл 1 раз в день",s:["day"],r:[[51,140]],g:"После мультивитаминов",nt:"3 месяца; время приёма в схеме не указано"},
+{id:"vd",n:"Витамин D 1200 МЕ",d:"Вигантол 3 капли утром с едой или спрей 3 нажатия",s:["bf"],r:[[21,INF]],g:"С 21-го дня",nt:"Срок в схеме не указан"},
+{id:"om",n:"Эсприко (омега-3)",d:"1 капсула с едой, 2 раза в день",s:["bf","dn"],r:[[40,129]],g:"С 40-го дня"},
+{id:"as",n:"Ассимилятор",d:"⅓–½ капсулы на самые плотные приёмы пищи, 2 раза в день",s:["bf","dn"],r:[[40,99]],g:"С 40-го дня"},
+{id:"lc",n:"Лецитин подсолнечный",d:"½ капсулы или ½ ч. л. порошка с едой, 2 раза в день",s:["bf","dn"],r:[[40,129]],g:"С 40-го дня"}
+];
+D.forEach((x,i)=>x.h=(i*47)%360);
+const col=x=>`hsl(${x.h} 50% 48%)`;
+const on=(x,n)=>x.r.some(([a,b])=>n>=a&&n<=b);
+const first=(x,n)=>x.r.some(([a])=>a===n&&n>1);
+const last=(x,n)=>x.r.some(([,b])=>b===n);
+let mem={};
+const ld=k=>{try{const v=localStorage.getItem(k);return v===null?mem[k]:v}catch(e){return mem[k]}};
+const sv=(k,v)=>{mem[k]=v;try{localStorage.setItem(k,v)}catch(e){}};
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const parse=s=>{const[a,b,c]=s.split("-").map(Number);return Date.UTC(a,b-1,c)};
+const today=iso(new Date());
+let start=ld("start")||today;if(!ld("start"))sv("start",start);
+let off=0,tab="t";
+const dayN=iso=>Math.round((parse(iso)-parse(start))/864e5)+1;
+const dateOf=n=>{const d=new Date(parse(start)+(n-1)*864e5);return d.toLocaleDateString("ru-RU",{day:"numeric",month:"short",timeZone:"UTC"})};
+const chk=(dt,id,s)=>ld(`c|${dt}|${id}|${s}`)==="1";
+function isoOff(o){const d=new Date(parse(today)+o*864e5);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")}
+function toggle(dt,id,s){sv(`c|${dt}|${id}|${s}`,chk(dt,id,s)?"0":"1");render()}
+function today_(){
+ const dt=isoOff(off),n=dayN(dt);
+ const title=new Date(parse(dt)).toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"});
+ let items=[];
+ SL.forEach(([k,lb])=>D.forEach(x=>{if(x.s.includes(k)&&on(x,n))items.push([k,lb,x])}));
+ const tot=items.length,dn=items.filter(([k,,x])=>chk(dt,x.id,k)).length;
+ let h=`<h1>${n>=1?"День "+n:"До старта"}</h1><div class="mut">${title}</div>
+ <div class="card"><div class="nav"><button onclick="off--;render()">←</button><b>${tot?dn+" из "+tot:"—"}</b><button onclick="off++;render()">→</button></div><div class="bar"><i style="width:${tot?dn/tot*100:0}%"></i></div></div>`;
+ if(n<1)return h+`<div class="card">Курс начинается ${dateOf(1)}. Дату старта можно изменить на вкладке «Курсы».</div>`;
+ if(!tot)return h+`<div class="card">На этот день приёмов нет.</div>`;
+ SL.forEach(([k,lb])=>{const r=items.filter(i=>i[0]===k);if(!r.length)return;
+  h+=`<div class="slot">${lb}</div>`;
+  r.forEach(([,,x])=>{const c=chk(dt,x.id,k);
+   h+=`<div class="row ${c?"done":""}" onclick="toggle('${dt}','${x.id}','${k}')"><button class="cb">${c?"✓":""}</button><div><div class="nm">${x.n}${first(x,n)?'<span class="tag">новый</span>':""}${last(x,n)?'<span class="tag">последний день</span>':""}</div><div class="ds">${x.d}</div></div></div>`});
+ });
+ return h;
+}
+const W=22;
+function plan(){
+ const cn=Math.floor((dayN(today)-1)/7)+1;
+ let h=`<h1>График</h1><div class="mut">Колонки — недели от старта. Обводка — текущая неделя.</div><div class="tl" style="margin-top:10px"><table><tr><th class="l"></th>`;
+ for(let w=1;w<=W;w++)h+=`<th class="${w===cn?"now":""}">${w}</th>`;
+ h+="</tr>";
+ D.forEach(x=>{
+  h+=`<tr><td class="l">${x.n}</td>`;
+  for(let w=1;w<=W;w++){const a=(w-1)*7+1,b=a+6;const act=x.r.some(([p,q])=>p<=b&&q>=a);
+   h+=`<td class="${act?"f":""} ${w===cn?"now":""}" style="${act?"background:"+col(x):""}"></td>`}
+  h+="</tr>"});
+ return h+`</table></div><div class="mut" style="margin-top:8px">Показано 22 недели. Витамин D идёт дальше: срок не указан.</div>`;
+}
+function courses(){
+ let h=`<h1>Курсы</h1><div class="card start"><label for="sd">Дата старта (день 1):</label><input type="date" id="sd" value="${start}" onchange="start=this.value;sv('start',start);off=0;render()"></div>`;
+ D.forEach(x=>{
+  const rg=x.r.map(([a,b])=>b>=INF?`с дня ${a}, без срока`:`дни ${a}–${b} (${dateOf(a)} – ${dateOf(b)})`).join("; ");
+  h+=`<div class="card cr" style="border-color:${col(x)}"><b>${x.n}</b><p>${x.d}</p><p>${rg}</p>${x.nt?`<p class="mut">${x.nt}</p>`:""}</div>`});
+ h+=`<div class="card"><b>Уточнить у врача</b><ul class="q">
+ <li>Сроки в днях посчитаны как 1 месяц = 30 дней, 1 неделя = 7 дней. В схеме даты не заданы.</li>
+ <li>КИП: сколько всего повторов курса, не указано.</li>
+ <li>Витамин D: срок приёма не указан.</li>
+ <li>Кальций и пробиотик: время приёма в течение дня не указано.</li>
+ <li>«2 раза в день с едой» понято как завтрак и ужин.</li>
+ <li>Мультивитамины в схеме по ссылке — детский комплекс (по названию ссылки). Подходит ли он взрослому — уточнить.</li>
+ <li>Вигантол: 3 капли обычно дают больше 1200 МЕ (по памяти, не проверено). Сверить дозировку по инструкции.</li>
+ <li>Диета FODMAP в файле отсутствует.</li></ul></div>`;
+ return h;
+}
+function render(){
+ const v={t:today_,p:plan,c:courses}[tab]();
+ document.getElementById("app").innerHTML=v;
+ document.getElementById("tabs").innerHTML=[["t","Сегодня"],["p","График"],["c","Курсы"]].map(([k,l])=>`<button class="${tab===k?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${l}</button>`).join("");
+}
+render();
+</script>
+</body>
+</html>
