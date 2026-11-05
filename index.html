@@ -35,100 +35,162 @@ h1{font-size:20px;margin:4px 0 2px}.mut{color:var(--mut);font-size:13px}
 .cr b{display:block}.cr p{margin:2px 0;font-size:13px}
 ul.q{padding-left:18px;margin:6px 0;font-size:14px}ul.q li{margin:6px 0}
 .start{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:14px;border:1px solid var(--ac);background:var(--acbg);color:var(--tx);border-radius:10px;padding:8px 14px}.start label{font-size:13px;color:var(--mut)}.dt{margin:6px 0}.start input[type=number]{font:inherit;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px}
+.seg{display:flex;gap:8px;margin:8px 0}.seg button{flex:1;font:inherit;font-size:14px;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px}.seg button.on{background:var(--acbg);border-color:var(--ac);font-weight:600}textarea{width:100%;font:12px/1.3 ui-monospace,Menlo,monospace;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px;margin:6px 0}.cr b .tag{font-weight:500}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"></div>
 <div class="tabs" id="tabs"></div>
 <script>
-const SL=[["am","Утро, до завтрака"],["bf","Завтрак, с едой"],["day","В течение дня"],["pm","Перед ужином, за 30 мин"],["dn","Ужин, с едой"]];
-const INF=9999;
+const SL=[["am","Утро"],["bf","Завтрак"],["ln","Обед"],["dn","Ужин"],["day","В течение дня"]];
+const GR=[[1,"С 1-го дня"],[21,"С 21-го дня"],[40,"С 40-го дня"]];
+const INF=9999,DAY=864e5;
+const mgR=[];for(let c=0;c<6;c++)mgR.push([c*44+1,c*44+30]);
 const D=[
-{id:"kip",n:"КИП",d:"1 флакон, развести водой комнатной температуры",s:["am"],r:[[1,15],[46,60]],g:"С 1-го дня",nt:"Повтор «через 1 месяц» — срок понят как пауза 30 дней после курса"},
-{id:"mg",n:"Mega-IgG2000",d:"1 капсула в сутки",s:["day"],r:[[61,90],[105,134],[149,178]],g:"После КИП",nt:"30 дней приёма, 14 дней перерыва, далее по кругу"},
-{id:"kc",n:"Кошачий коготь",d:"1 капсула с едой",s:["bf"],r:[[1,60]],g:"С 1-го дня"},
-{id:"fl",n:"Фламин (саше)",d:"1 саше за 30 мин до еды, 2 раза в день",s:["am","pm"],r:[[1,42]],g:"С 1-го дня"},
-{id:"rb",n:"Ребагит 100 мг",d:"½ таблетки с едой, 2 раза в день",s:["bf","dn"],r:[[1,60]],g:"С 1-го дня"},
-{id:"hs",n:"Хомоспорин М",d:"15 мл за 30 мин до еды",s:["am"],r:[[21,41]],g:"С 21-го дня"},
-{id:"pb",n:"Пробиотик Бакздрав 29",d:"1 капсула кишечнорастворимая",s:["day"],r:[[42,71]],g:"С 21-го дня",nt:"После Хомоспорина, 1 месяц"},
-{id:"zn",n:"Цинк-карнозин",d:"1 капсула с едой",s:["bf"],r:[[21,80]],g:"С 21-го дня"},
-{id:"th",n:"Теанин",d:"1 капсула с едой",s:["bf"],r:[[21,80]],g:"С 21-го дня"},
-{id:"mv",n:"Мультивитамины",d:"1 таблетка с едой",s:["bf"],r:[[21,50]],g:"С 21-го дня"},
-{id:"ca",n:"Кальций",d:"10 мл 1 раз в день",s:["day"],r:[[51,140]],g:"После мультивитаминов",nt:"3 месяца; время приёма в схеме не указано"},
-{id:"vd",n:"Витамин D 1200 МЕ",d:"Вигантол 3 капли утром с едой или спрей 3 нажатия",s:["bf"],r:[[21,INF]],g:"С 21-го дня",nt:"Срок в схеме не указан"},
-{id:"om",n:"Эсприко (омега-3)",d:"1 капсула с едой, 2 раза в день",s:["bf","dn"],r:[[40,129]],g:"С 40-го дня"},
-{id:"as",n:"Ассимилятор",d:"⅓–½ капсулы на самые плотные приёмы пищи, 2 раза в день",s:["bf","dn"],r:[[40,99]],g:"С 40-го дня"},
-{id:"lc",n:"Лецитин подсолнечный",d:"½ капсулы или ½ ч. л. порошка с едой, 2 раза в день",s:["bf","dn"],r:[[40,129]],g:"С 40-го дня"}
+{id:"kip",no:"1",g:1,ref:1,n:"КИП",d:"1 флакон утром, развести водой комнатной температуры",dur:"2 курса: 15 дн., пауза 30 дн., 15 дн.",s:["am"],r:[[1,15],[46,60]]},
+{id:"mg",no:"1→",g:1,after:"kip",n:"Mega-IgG2000",d:"1 капсула в сутки",dur:"30 дн. приёма, 14 дн. перерыва, далее по кругу",s:["day"],r:mgR},
+{id:"kc",no:"2",g:1,ref:1,n:"Кошачий коготь",d:"1 капсула с едой",dur:"60 дн. (2 мес.)",s:["bf"],r:[[1,60]]},
+{id:"fl",no:"3",g:1,ref:1,n:"Фламин (саше)",d:"1 саше за 30 мин до еды, 2 раза в день",dur:"42 дн. (6 нед.)",s:["ln","dn"],r:[[1,42]]},
+{id:"rb",no:"4",g:1,ref:1,n:"Ребагит 100 мг",d:"½ таблетки с едой, 2 раза в день",dur:"60 дн. (2 мес.)",s:["ln","dn"],r:[[1,60]]},
+{id:"hs",no:"5",g:21,ref:21,n:"Хомоспорин М",d:"15 мл за 30 мин до еды",dur:"21 дн. (3 нед.)",s:["am"],r:[[1,21]]},
+{id:"pb",no:"5→",g:21,after:"hs",n:"Пробиотик Бакздрав 29",d:"1 капсула кишечнорастворимая, во время еды",dur:"30 дн. (1 мес.)",s:["bf"],r:[[1,30]]},
+{id:"zn",no:"6",g:21,ref:21,n:"Цинк-карнозин",d:"1 капсула с едой",dur:"60 дн. (2 мес.)",s:["bf"],r:[[1,60]]},
+{id:"th",no:"7",g:21,ref:21,n:"Теанин",d:"1 капсула с едой",dur:"60 дн. (2 мес.)",s:["bf"],r:[[1,60]]},
+{id:"mv",no:"8",g:21,ref:21,n:"Мультивитамины",d:"1 таблетка с едой",dur:"30 дн. (1 мес.)",s:["bf"],r:[[1,30]]},
+{id:"ca",no:"8→",g:21,after:"mv",n:"Кальций",d:"10 мл 1 раз в день, во время еды",dur:"90 дн. (3 мес.)",s:["bf"],r:[[1,90]]},
+{id:"vd",no:"9",g:21,ref:21,n:"Витамин D",d:"1200 МЕ 1 раз в день утром с едой (по схеме)",dur:"срок в схеме не указан",s:["bf"],r:[[1,INF]]},
+{id:"om",no:"10",g:40,ref:40,n:"Эсприко (омега-3)",d:"1 капсула с едой, 2 раза в день",dur:"90 дн. (3 мес.)",s:["ln","dn"],r:[[1,90]]},
+{id:"as",no:"11",g:40,ref:40,n:"Ассимилятор",d:"⅓–½ капсулы на самые плотные приёмы пищи, 2 раза в день",dur:"60 дн. (2 мес.)",s:["ln","dn"],r:[[1,60]]},
+{id:"lc",no:"12",g:40,ref:40,n:"Лецитин подсолнечный",d:"½ капсулы или ½ ч. л. порошка с едой, 2 раза в день",dur:"90 дн. (3 мес.)",s:["ln","dn"],r:[[1,90]]}
 ];
 D.forEach((x,i)=>x.h=(i*47)%360);
 const col=x=>`hsl(${x.h} 50% 48%)`;
 const on=(x,n)=>x.r.some(([a,b])=>n>=a&&n<=b);
-const first=(x,n)=>x.r.some(([a])=>a===n&&n>1);
-const last=(x,n)=>x.r.some(([,b])=>b===n);
 let mem={};
 const ld=k=>{try{const v=localStorage.getItem(k);return v===null?mem[k]:v}catch(e){return mem[k]}};
 const sv=(k,v)=>{mem[k]=v;try{localStorage.setItem(k,v)}catch(e){}};
-const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const pad=n=>String(n).padStart(2,"0");
+const isoMs=ms=>new Date(ms).toISOString().slice(0,10);
 const parse=s=>{const[a,b,c]=s.split("-").map(Number);return Date.UTC(a,b-1,c)};
-const today=iso(new Date());
-let start=ld("start")||today;if(!ld("start"))sv("start",start);
-let off=0,tab="t";
-const dayN=iso=>Math.round((parse(iso)-parse(start))/864e5)+1;
-const dateOf=n=>{const d=new Date(parse(start)+(n-1)*864e5);return d.toLocaleDateString("ru-RU",{day:"numeric",month:"short",timeZone:"UTC"})};
+const dS=ms=>new Date(ms).toLocaleDateString("ru-RU",{day:"numeric",month:"short",timeZone:"UTC"});
+const t0=new Date(),today=t0.getFullYear()+"-"+pad(t0.getMonth()+1)+"-"+pad(t0.getDate());
+const S=id=>ld("s|"+id)||"";
+const d1=()=>ld("d1")||ld("base")||"";
+const byId=id=>D.find(y=>y.id===id);
+const endRel=x=>x.r[x.r.length-1][1];
+function refStart(x){const b=d1();if(!b)return null;
+ if(x.after){const p=byId(x.after);return refStart(p)+endRel(p)*DAY}
+ return parse(b)+(x.ref-1)*DAY}
+function startOf(x){const e=S(x.id);if(e)return parse(e);
+ if(x.after){const p=byId(x.after),ps=startOf(p);return ps===null?null:ps+endRel(p)*DAY}
+ return refStart(x)}
+const per=(x,s)=>{if(s===null)return"—";const L=x.r.length>3?x.r.slice(0,3):x.r;
+ return L.map(([a,b])=>b>=INF?`с ${dS(s+(a-1)*DAY)}, без срока`:`${dS(s+(a-1)*DAY)} – ${dS(s+(b-1)*DAY)}`).join("; ")+(x.r.length>3?"; далее по кругу":"")};
+let off=0,tab="t",pm="my";
 const chk=(dt,id,s)=>ld(`c|${dt}|${id}|${s}`)==="1";
-function isoOff(o){const d=new Date(parse(today)+o*864e5);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")}
+const isoOff=o=>isoMs(parse(today)+o*DAY);
 function toggle(dt,id,s){sv(`c|${dt}|${id}|${s}`,chk(dt,id,s)?"0":"1");render()}
+function ss(id,v){sv("s|"+id,v||"");render()}
+function setD1(v){sv("d1",v||"");render()}
+function auto(){
+ const b=d1(),st=Math.max(1,+document.getElementById("st").value||5);
+ if(!b)return;let i=0;
+ D.forEach(x=>{if(x.after){sv("s|"+x.id,"");return}sv("s|"+x.id,isoMs(parse(b)+i*st*DAY));i++});
+ sv("step",String(st));render()}
+function resetAll(){D.forEach(x=>sv("s|"+x.id,""));render()}
+const KEY=/^(c\||s\||d1$|step$|base$)/;
+function snap(){const o={};
+ const add=(k,v)=>{if(KEY.test(k)&&v&&(!k.startsWith("c|")||v==="1"))o[k]=v};
+ try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);add(k,localStorage.getItem(k))}}catch(e){for(const k in mem)add(k,mem[k])}
+ return JSON.stringify({v:1,t:Date.now(),data:o})}
+function msg(t){const m=document.getElementById("bm");if(m)m.textContent=t}
+function copyBk(){const t=snap(),ta=document.getElementById("bkta");sv("bk",String(Date.now()));
+ const fb=()=>{ta.value=t;ta.focus();ta.select();msg("Не удалось скопировать автоматически. Текст выделен, скопируйте его вручную.")};
+ try{navigator.clipboard.writeText(t).then(()=>msg("Скопировано. Вставьте текст в заметки или отправьте себе."),fb)}catch(e){fb()}}
+function dl(){try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([snap()],{type:"application/json"}));a.download="diary-backup.json";document.body.appendChild(a);a.click();a.remove();sv("bk",String(Date.now()));msg("Файл сохранён, если браузер разрешил загрузку.")}catch(e){msg("Загрузка файла здесь недоступна, используйте копирование текста.")}}
+function restore(){try{const o=JSON.parse(document.getElementById("rs").value);
+ if(!o||typeof o.data!=="object")throw 0;let n=0;
+ for(const k in o.data)if(KEY.test(k)){sv(k,String(o.data[k]));n++}
+ render();msg("Восстановлено записей: "+n)}catch(e){msg("Текст копии не распознан. Проверьте, что вставлен весь текст.")}}
+function readFile(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById("rs").value=r.result;msg("Файл прочитан. Нажмите «Восстановить».")};r.readAsText(f)}
 function today_(){
- const dt=isoOff(off),n=dayN(dt);
- const title=new Date(parse(dt)).toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"});
- let items=[];
- SL.forEach(([k,lb])=>D.forEach(x=>{if(x.s.includes(k)&&on(x,n))items.push([k,lb,x])}));
- const tot=items.length,dn=items.filter(([k,,x])=>chk(dt,x.id,k)).length;
- let h=`<h1>${n>=1?"День "+n:"До старта"}</h1><div class="mut">${title}</div>
+ const dt=isoOff(off),dm=parse(dt);
+ const title=new Date(dm).toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"});
+ let items=[],ns=0;
+ D.forEach(x=>{const s=startOf(x);if(s===null){ns++;return}
+  const n=Math.round((dm-s)/DAY)+1;if(!on(x,n))return;
+  x.s.forEach(k=>items.push([k,x,n]))});
+ const tot=items.length,dn=items.filter(([k,x])=>chk(dt,x.id,k)).length;
+ let h=`<h1>${off===0?"Сегодня":"День"}</h1><div class="mut">${title}</div>
  <div class="card"><div class="nav"><button onclick="off--;render()">←</button><b>${tot?dn+" из "+tot:"—"}</b><button onclick="off++;render()">→</button></div><div class="bar"><i style="width:${tot?dn/tot*100:0}%"></i></div></div>`;
- if(n<1)return h+`<div class="card">Курс начинается ${dateOf(1)}. Дату старта можно изменить на вкладке «Курсы».</div>`;
- if(!tot)return h+`<div class="card">На этот день приёмов нет.</div>`;
+ if(!tot)h+=`<div class="card">${ns===D.length?"Задайте дату дня 1 схемы на вкладке «Схема».":"На этот день приёмов нет."}</div>`;
  SL.forEach(([k,lb])=>{const r=items.filter(i=>i[0]===k);if(!r.length)return;
   h+=`<div class="slot">${lb}</div>`;
-  r.forEach(([,,x])=>{const c=chk(dt,x.id,k);
-   h+=`<div class="row ${c?"done":""}" onclick="toggle('${dt}','${x.id}','${k}')"><button class="cb">${c?"✓":""}</button><div><div class="nm">${x.n}${first(x,n)?'<span class="tag">новый</span>':""}${last(x,n)?'<span class="tag">последний день</span>':""}</div><div class="ds">${x.d}</div></div></div>`});
+  r.forEach(([,x,n])=>{const c=chk(dt,x.id,k),g=x.r.find(([a,b])=>n>=a&&n<=b);
+   const prog=` · день ${n-g[0]+1}${g[1]<INF?" из "+(g[1]-g[0]+1):""}`;
+   h+=`<div class="row ${c?"done":""}" onclick="toggle('${dt}','${x.id}','${k}')"><button class="cb">${c?"✓":""}</button><div><div class="nm">${x.n}${n===g[0]?'<span class="tag">старт</span>':""}${n===g[1]?'<span class="tag">последний день</span>':""}</div><div class="ds">${x.d}${prog}</div></div></div>`});
  });
- return h;
-}
-const W=22;
+ if(ns>0&&ns<D.length&&off===0)h+=`<div class="card mut">Не начаты: ${ns} из ${D.length}. Даты — на вкладке «Схема».</div>`;
+ return h}
 function plan(){
- const cn=Math.floor((dayN(today)-1)/7)+1;
- let h=`<h1>График</h1><div class="mut">Колонки — недели от старта. Обводка — текущая неделя.</div><div class="tl" style="margin-top:10px"><table><tr><th class="l"></th>`;
+ const f=x=>pm==="ref"?refStart(x):startOf(x);
+ const seg=`<div class="seg"><button class="${pm==="my"?"on":""}" onclick="pm='my';render()">Мой план</button><button class="${pm==="ref"?"on":""}" onclick="pm='ref';render()">Эталон (как в схеме)</button></div>`;
+ const rows=D.map(x=>({x,s:f(x)}));
+ const st=rows.filter(r=>r.s!==null);
+ if(!st.length)return `<h1>График</h1>${seg}<div class="card">Задайте дату дня 1 схемы на вкладке «Схема».</div>`;
+ const minS=Math.min(...st.map(r=>r.s));
+ const maxE=Math.max(...st.map(r=>{const l=endRel(r.x);return r.s+((l>=INF?120:l)-1)*DAY}));
+ const W=Math.min(40,Math.max(8,Math.ceil((maxE-minS)/DAY/7)+1));
+ const cn=Math.floor((parse(today)-minS)/DAY/7)+1;
+ let h=`<h1>График</h1>${seg}<div class="mut">Колонки — недели от ${dS(minS)}. Обводка — текущая неделя.</div><div class="tl" style="margin-top:10px"><table><tr><th class="l"></th>`;
  for(let w=1;w<=W;w++)h+=`<th class="${w===cn?"now":""}">${w}</th>`;
  h+="</tr>";
- D.forEach(x=>{
-  h+=`<tr><td class="l">${x.n}</td>`;
-  for(let w=1;w<=W;w++){const a=(w-1)*7+1,b=a+6;const act=x.r.some(([p,q])=>p<=b&&q>=a);
+ rows.forEach(({x,s})=>{
+  h+=`<tr><td class="l" ${s===null?'style="opacity:.5"':""}>${x.n}</td>`;
+  for(let w=1;w<=W;w++){let act=false;
+   if(s!==null){const a=minS+(w-1)*7*DAY,b=a+6*DAY;act=x.r.some(([p,q])=>s+(p-1)*DAY<=b&&s+(q-1)*DAY>=a)}
    h+=`<td class="${act?"f":""} ${w===cn?"now":""}" style="${act?"background:"+col(x):""}"></td>`}
   h+="</tr>"});
- return h+`</table></div><div class="mut" style="margin-top:8px">Показано 22 недели. Витамин D идёт дальше: срок не указан.</div>`;
-}
-function courses(){
- let h=`<h1>Курсы</h1><div class="card start"><label for="sd">Дата старта (день 1):</label><input type="date" id="sd" value="${start}" onchange="start=this.value;sv('start',start);off=0;render()"></div>`;
- D.forEach(x=>{
-  const rg=x.r.map(([a,b])=>b>=INF?`с дня ${a}, без срока`:`дни ${a}–${b} (${dateOf(a)} – ${dateOf(b)})`).join("; ");
-  h+=`<div class="card cr" style="border-color:${col(x)}"><b>${x.n}</b><p>${x.d}</p><p>${rg}</p>${x.nt?`<p class="mut">${x.nt}</p>`:""}</div>`});
- h+=`<div class="card"><b>Уточнить у врача</b><ul class="q">
- <li>Сроки в днях посчитаны как 1 месяц = 30 дней, 1 неделя = 7 дней. В схеме даты не заданы.</li>
- <li>КИП: сколько всего повторов курса, не указано.</li>
- <li>Витамин D: срок приёма не указан.</li>
- <li>Кальций и пробиотик: время приёма в течение дня не указано.</li>
- <li>«2 раза в день с едой» понято как завтрак и ужин.</li>
- <li>Мультивитамины в схеме по ссылке — детский комплекс (по названию ссылки). Подходит ли он взрослому — уточнить.</li>
- <li>Вигантол: 3 капли обычно дают больше 1200 МЕ (по памяти, не проверено). Сверить дозировку по инструкции.</li>
+ return h+`</table></div><div class="mut" style="margin-top:8px">Витамин D показан на 120 дней, срок в схеме не указан. У Mega-IgG2000 показаны только ближайшие циклы.</div>`}
+function schema(){
+ const b=d1(),stp=ld("step")||"5",bk=ld("bk");
+ let h=`<h1>Схема</h1><div class="mut">Эталон — схема из файла. Меняйте дату старта у любого препарата, остальное пересчитается.</div>
+ <div class="card"><div class="start"><label>Дата дня 1 схемы</label><input type="date" value="${b}" onchange="setD1(this.value)"></div>
+ <div class="mut" style="margin:8px 0">От неё считается эталон: препараты «с 1-го», «с 21-го» и «с 40-го дня».</div>
+ <div class="start"><label>Шаг, дней</label><input type="number" id="st" min="1" value="${stp}" style="width:70px"><button class="btn" onclick="auto()">Расставить: 1 препарат за шаг</button></div>
+ <div class="start" style="margin-top:8px"><button class="btn" onclick="resetAll()">Вернуть все даты как в схеме</button></div></div>`;
+ GR.forEach(([g,lb])=>{
+  h+=`<div class="slot">${lb}</div>`;
+  D.filter(x=>x.g===g).forEach(x=>{
+   const rs=refStart(x),as=startOf(x),ex=S(x.id);
+   const sh=(as!==null&&rs!==null)?Math.round((as-rs)/DAY):null;
+   const tg=sh===null?"":sh===0?'<span class="tag" style="background:var(--acbg);color:var(--tx)">как в схеме</span>':`<span class="tag">${sh>0?"+":""}${sh} дн. к схеме</span>`;
+   h+=`<div class="card cr" style="border-color:${col(x)}"><b>№${x.no}. ${x.n}${tg}</b><p>${x.d}</p>
+   <p class="mut">По схеме: ${x.after?"после №"+byId(x.after).no+" (по окончании)":"с дня "+x.ref}, ${x.dur}</p>
+   ${rs!==null?`<p class="mut">Эталон: ${per(x,rs)}</p>`:""}
+   <div class="start dt"><label>Мой старт</label><input type="date" value="${as!==null?isoMs(as):""}" onchange="ss('${x.id}',this.value)">${ex?`<button class="btn" onclick="ss('${x.id}','')">как в схеме</button>`:""}</div>
+   <p>План: ${per(x,as)}</p></div>`})});
+ h+=`<div class="card"><b>Резервная копия</b>
+ <div class="mut" style="margin:4px 0 8px">Даты и отметки хранятся в этом браузере. Браузер может их удалить при очистке данных. Сохраните копию и восстановите её при необходимости.${bk?" Последняя копия: "+new Date(+bk).toLocaleDateString("ru-RU")+".":" Копия ещё не делалась."}</div>
+ <div class="start"><button class="btn" onclick="copyBk()">Скопировать копию</button><button class="btn" onclick="dl()">Скачать файл</button></div>
+ <textarea id="bkta" rows="2" readonly></textarea>
+ <b>Восстановить</b><textarea id="rs" rows="2" placeholder="Вставьте текст копии"></textarea>
+ <div class="start"><button class="btn" onclick="restore()">Восстановить</button><input type="file" accept=".json,application/json" onchange="readFile(this)"></div>
+ <p class="mut" id="bm"></p></div>
+ <div class="card"><b>Допущения</b><ul class="q">
+ <li>1 месяц = 30 дней, 1 неделя = 7 дней. Срок каждого препарата считается от его даты старта.</li>
+ <li>«1 раз в день с едой» стоит на завтраке, «2 раза в день» — на обеде и ужине, включая Фламин (за 30 мин до еды).</li>
+ <li>Витамин D: срок приёма в схеме не указан.</li>
  <li>Диета FODMAP в файле отсутствует.</li></ul></div>`;
- return h;
-}
+ return h}
 function render(){
- const v={t:today_,p:plan,c:courses}[tab]();
+ const v={t:today_,p:plan,c:schema}[tab]();
  document.getElementById("app").innerHTML=v;
- document.getElementById("tabs").innerHTML=[["t","Сегодня"],["p","График"],["c","Курсы"]].map(([k,l])=>`<button class="${tab===k?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${l}</button>`).join("");
+ const b=document.getElementById("bkta");if(b)b.value=snap();
+ document.getElementById("tabs").innerHTML=[["t","Сегодня"],["p","График"],["c","Схема"]].map(([k,l])=>`<button class="${tab===k?"on":""}" onclick="tab='${k}';render();scrollTo(0,0)">${l}</button>`).join("");
 }
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 render();
 </script>
 </body>
